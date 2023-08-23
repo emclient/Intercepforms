@@ -17,35 +17,46 @@ namespace ApplyResourcesSourceGen
         {
             var applyResourcesLocations = context.SyntaxProvider
                 .CreateSyntaxProvider(predicate: (node, _) => node is InvocationExpressionSyntax, transform: SyntaxProviderLocationTransformer)
-                .Where(x => x is not null)
+                .Where(x => x.Item1 is not null)
                 .Collect();
 
             context.RegisterSourceOutput(source: applyResourcesLocations, action: SourceOutputAction);
         }
 
-        private static Location SyntaxProviderLocationTransformer(GeneratorSyntaxContext context, CancellationToken ct)
+        private static (Location, string, string) SyntaxProviderLocationTransformer(GeneratorSyntaxContext context, CancellationToken ct)
         {
+            // Check we are inside InitializeComponent
+            var containingMethodInfo = context.Node.FirstAncestorOrSelf<MethodDeclarationSyntax>();
+            if (!containingMethodInfo?.Identifier.Text.Equals("InitializeComponent") == true)
+                return (null!, null!, null!);
+            var containingMethodSymbol = context.SemanticModel.GetDeclaredSymbol(containingMethodInfo, ct);
+
+            // Check this is call to ApplyResources
             var invocationExpression = (InvocationExpressionSyntax)context.Node;
-
             var invocationSymbol = context.SemanticModel.GetSymbolInfo(invocationExpression);
-
             var applyResourcesMethod = context.SemanticModel.Compilation
                 .GetTypeByMetadataName("System.ComponentModel.ComponentResourceManager")
                 ?.GetMembers("ApplyResources")
                 .OfType<IMethodSymbol>()
                 .FirstOrDefault(m => m.Parameters.Length == 2);
-
             if (invocationSymbol.Symbol is not IMethodSymbol methodSymbol ||
                 applyResourcesMethod is null ||
                 !methodSymbol.Equals(applyResourcesMethod, SymbolEqualityComparer.Default))
-                return null!;
+                return (null!, null!, null!);
 
+            // Extract objectName argument (assumes a constant string)
+            if (invocationExpression.ArgumentList.Arguments[1].Expression is not LiteralExpressionSyntax literalExpressionSyntax)
+                return (null!, null!, null!);
+            string objectName = literalExpressionSyntax.Token.ValueText;
+
+            var symbolDisplayFormat = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
+            string fullTypeName = containingMethodSymbol.ContainingType.ToDisplayString(symbolDisplayFormat);
             var memberAccessExpression = (MemberAccessExpressionSyntax)invocationExpression.Expression;
 
-            return memberAccessExpression.Name.GetLocation();
+            return (memberAccessExpression.Name.GetLocation(), fullTypeName, objectName);
         }
 
-        private static void SourceOutputAction(SourceProductionContext context, ImmutableArray<Location> locations)
+        private static void SourceOutputAction(SourceProductionContext context, ImmutableArray<(Location, string, string)> locationsAndParams)
         {
             var builder = new StringBuilder();
 
@@ -69,7 +80,7 @@ namespace ApplyResourcesSourceGen
             """);
 
             int i = 1;
-            foreach (var location in locations)
+            foreach ((var location, var typeName, var objectName) in locationsAndParams)
             {
                 if (location.SourceTree is null)
                     continue;
