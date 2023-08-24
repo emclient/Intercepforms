@@ -11,11 +11,20 @@
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\ApplyResourcesSourceGen\ApplyResourcesSourceGen.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
-  </ItemGroup>
   <PropertyGroup>
     <AdditionalFileItemNames>$(AdditionalFileItemNames);EmbeddedResource</AdditionalFileItemNames>
   </PropertyGroup>
+
+	<PropertyGroup>
+		<GeneratedFilesLocation>Generated</GeneratedFilesLocation>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+		<CompilerGeneratedFilesOutputPath>$(GeneratedFilesLocation)</CompilerGeneratedFilesOutputPath>
+	</PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ApplyResourcesSourceGen\ApplyResourcesSourceGen.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+	<Compile Remove="$(GeneratedFilesLocation)\**" />
+	<None Include="$(GeneratedFilesLocation)\**" />
+  </ItemGroup>
 
 </Project>
