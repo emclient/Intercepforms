@@ -87,7 +87,7 @@ namespace ApplyResourcesSourceGen
             return (memberAccessExpression.Name.GetLocation(), objectType, objectName);
         }
 
-        private static void SourceOutputAction(SourceProductionContext context, ((ImmutableArray<(Location, ITypeSymbol, string)> left, ImmutableArray<AdditionalText> right) files, AnalyzerConfigOptionsProvider config) input)
+        private void SourceOutputAction(SourceProductionContext context, ((ImmutableArray<(Location, ITypeSymbol, string)> left, ImmutableArray<AdditionalText> right) files, AnalyzerConfigOptionsProvider config) input)
         {
             var builder = new StringBuilder();
             var locationsAndResxFiles = input.files;
@@ -173,18 +173,34 @@ namespace ApplyResourcesSourceGen
                         using (writer.WriteBlock())
                         {
                             writer.WriteLine($"System.Diagnostics.Debug.WriteLine(\"ApplyResources{i}({objectType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}, \\\"{objectName}\\\")\");");
+                            writer.WriteLine($"var control = ({objectType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)})value;");
 
+                            var fallbackNeeded = false;
                             if (resxMap.TryGetValue(objectName, out var properties))
                             {
                                 foreach (var kvp in properties)
                                 {
                                     var property = kvp.Key;
                                     var (type, value) = kvp.Value;
-                                    writer.WriteLine($"System.Diagnostics.Debug.WriteLine(\"ApplyResources{i}({objectName}.{property} = {value})\");");
+                                    if (string.IsNullOrEmpty(type))
+                                    {
+                                        writer.WriteLine($"control.{property} = manager.GetString(\"{objectName}.{property}\");");
+                                    }
+                                    else if (TryConvertToSimpleAssignment(type, value, out var code))
+                                    {
+                                        writer.WriteLine($"control.{property} = {code};");
+                                    }
+                                    else
+                                    {
+                                        fallbackNeeded = true;
+                                        writer.WriteLine($"System.Diagnostics.Debug.WriteLine(\"ApplyResources{i}({objectName}.{property} = {value})\");");
+                                    }
                                 }
                             }
-
-                            writer.WriteLine("manager.ApplyResources(value, objectName);");
+                            if (fallbackNeeded)
+                            {
+                                writer.WriteLine("manager.ApplyResources(value, objectName);");
+                            }
                         }
                         builder.AppendLine($"");
                         i++;
@@ -194,6 +210,43 @@ namespace ApplyResourcesSourceGen
                 context.AddSource($"{relativePathWithoutExt}.g.cs", builder.ToString());
                 fileNum++;
             }
+        }
+
+        private bool TryConvertToSimpleAssignment(string type, string value, out string code)
+        {
+            code = null;
+            if (string.IsNullOrWhiteSpace(type)) return false;
+            switch(type)
+            {
+                case "System.Int32, mscorlib":
+                    code = value;
+                    return true;
+                case "System.Boolean, mscorlib":
+                    code = value.ToLower();
+                    return true;
+                case "System.Drawing.Size, System.Drawing":
+                    code = $"new System.Drawing.Size({value})";
+                    return true;
+                case "System.Drawing.Point, System.Drawing":
+                    code = $"new System.Drawing.Point({value})";
+                    return true;
+                case "System.Drawing.SizeF, System.Drawing":
+                    if (!value.Contains("."))
+                    {
+                        code = $"new System.Drawing.SizeF({value})";
+                    }
+                    else
+                    {
+                        throw new NotImplementedException();
+                    }
+                    return true;
+            }
+            if (type.StartsWith("System.Boolean, mscorlib"))
+            {
+                code = value;
+                return true;
+            }
+            return false;
         }
     }
 }
