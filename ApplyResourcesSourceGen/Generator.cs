@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
+using System.Net.Mime;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
@@ -15,25 +17,34 @@ namespace ApplyResourcesSourceGen
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
+            var resxFiles = context.AdditionalTextsProvider.Where(static af => af.Path.EndsWith(".resx")).Collect();
+
             var applyResourcesLocations = context.SyntaxProvider
                 .CreateSyntaxProvider(predicate: (node, _) => node is InvocationExpressionSyntax, transform: SyntaxProviderLocationTransformer)
                 .Where(x => x.Item1 is not null)
                 .Collect();
 
-            context.RegisterSourceOutput(source: applyResourcesLocations, action: SourceOutputAction);
+            var locationsAndResxFiles = applyResourcesLocations.Combine(resxFiles);
+
+            context.RegisterSourceOutput(source: locationsAndResxFiles, action: SourceOutputAction);
         }
 
-        private static (Location, string, string) SyntaxProviderLocationTransformer(GeneratorSyntaxContext context, CancellationToken ct)
+        private static (Location, ITypeSymbol, string) SyntaxProviderLocationTransformer(GeneratorSyntaxContext context, CancellationToken ct)
         {
+            // Only look into .Designer.cs files
+            var location = context.Node.GetLocation();
+            if (location.SourceTree is null || !location.SourceTree.FilePath.EndsWith(".Designer.cs", StringComparison.OrdinalIgnoreCase))
+                return (null!, null!, null!);
+
             // Check we are inside InitializeComponent
             var containingMethodInfo = context.Node.FirstAncestorOrSelf<MethodDeclarationSyntax>();
-            if (!containingMethodInfo?.Identifier.Text.Equals("InitializeComponent") == true)
+            if (!containingMethodInfo?.Identifier.Text.Equals("InitializeComponent") != false)
                 return (null!, null!, null!);
             var containingMethodSymbol = context.SemanticModel.GetDeclaredSymbol(containingMethodInfo, ct);
 
             // Check this is call to ApplyResources
             var invocationExpression = (InvocationExpressionSyntax)context.Node;
-            var invocationSymbol = context.SemanticModel.GetSymbolInfo(invocationExpression);
+            var invocationSymbol = context.SemanticModel.GetSymbolInfo(invocationExpression, ct);
             var applyResourcesMethod = context.SemanticModel.Compilation
                 .GetTypeByMetadataName("System.ComponentModel.ComponentResourceManager")
                 ?.GetMembers("ApplyResources")
@@ -49,14 +60,13 @@ namespace ApplyResourcesSourceGen
                 return (null!, null!, null!);
             string objectName = literalExpressionSyntax.Token.ValueText;
 
-            var symbolDisplayFormat = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
-            string fullTypeName = containingMethodSymbol.ContainingType.ToDisplayString(symbolDisplayFormat);
+            ITypeSymbol objectType = context.SemanticModel.GetTypeInfo(invocationExpression.ArgumentList.Arguments[0].Expression, ct).Type;
             var memberAccessExpression = (MemberAccessExpressionSyntax)invocationExpression.Expression;
 
-            return (memberAccessExpression.Name.GetLocation(), fullTypeName, objectName);
+            return (memberAccessExpression.Name.GetLocation(), objectType, objectName);
         }
 
-        private static void SourceOutputAction(SourceProductionContext context, ImmutableArray<(Location, string, string)> locationsAndParams)
+        private static void SourceOutputAction(SourceProductionContext context, (ImmutableArray<(Location, ITypeSymbol, string)> left, ImmutableArray<AdditionalText> right) locationsAndResxFiles)
         {
             var builder = new StringBuilder();
 
@@ -80,9 +90,14 @@ namespace ApplyResourcesSourceGen
             """);
 
             int i = 1;
-            foreach ((var location, var typeName, var objectName) in locationsAndParams)
+            foreach ((var location, var objectType, var objectName) in locationsAndResxFiles.left)
             {
                 if (location.SourceTree is null)
+                    continue;
+
+                var resXFileName = location.SourceTree.FilePath.Substring(0, location.SourceTree.FilePath.Length - ".Designer.cs".Length) + ".resx";
+                var resXFile = locationsAndResxFiles.right.FirstOrDefault(f => f.Path == resXFileName);
+                if (resXFile == null)
                     continue;
 
                 var lineSpan = location.GetLineSpan();
@@ -94,7 +109,7 @@ namespace ApplyResourcesSourceGen
                 builder.AppendLine($"""
                     public static void ApplyResources{i}(this System.ComponentModel.ComponentResourceManager manager, object value, string objectName)
                     {"{"}
-                        System.Diagnostics.Debug.WriteLine("ApplyResources{i}");
+                        System.Diagnostics.Debug.WriteLine("ApplyResources{i} {objectType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}");
                         manager.ApplyResources(value, objectName);
                     {"}"}
                 """);

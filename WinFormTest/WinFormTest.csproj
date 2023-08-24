@@ -12,7 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<ProjectReference Include="..\ApplyResourcesSourceGen\ApplyResourcesSourceGen.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
-  </ItemGroup>	
+    <ProjectReference Include="..\ApplyResourcesSourceGen\ApplyResourcesSourceGen.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+  </ItemGroup>
+  <PropertyGroup>
+    <AdditionalFileItemNames>$(AdditionalFileItemNames);EmbeddedResource</AdditionalFileItemNames>
+  </PropertyGroup>
 
 </Project>

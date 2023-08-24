@@ -29,15 +29,25 @@ partial class Form1
     private void InitializeComponent()
     {
         System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
+        label1 = new Label();
         SuspendLayout();
+        // 
+        // label1
+        // 
+        resources.ApplyResources(label1, "label1");
+        label1.Name = "label1";
         // 
         // Form1
         // 
         resources.ApplyResources(this, "$this");
         AutoScaleMode = AutoScaleMode.Font;
+        Controls.Add(label1);
         Name = "Form1";
         ResumeLayout(false);
+        PerformLayout();
     }
 
     #endregion
+
+    private Label label1;
 }
