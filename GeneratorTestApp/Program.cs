@@ -25,6 +25,12 @@ namespace TestConsoleApp
                 var workspace = MSBuildWorkspace.Create();
                 var project = await workspace.OpenProjectAsync((string)AppContext.GetData("WinFormsProjectPath")!);
                 var compilation = await project.GetCompilationAsync()!;
+                if (compilation is null)
+                {
+                    return;
+                }
+                var trees = compilation.SyntaxTrees.ToList();
+                Console.WriteLine(string.Join("\r\n", trees.Skip(1).Select(t => $"{t.FilePath}:\r\n{t}")));
             }).Wait();
         }
     }
