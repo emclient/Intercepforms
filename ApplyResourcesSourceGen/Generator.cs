@@ -209,7 +209,7 @@ namespace ApplyResourcesSourceGen
                                     {
                                         TableLayoutSettingsTypeConverter.WriteCode(writer, $"control.{property}", value);
                                     }
-                                    else if (type == "System.Drawing.Bitmap, System.Drawing")
+                                    else if (type is "System.Drawing.Bitmap, System.Drawing" or "System.Drawing.Icon, System.Drawing")
                                     {
                                         var bytes = Convert.FromBase64String(value);
                                         using (writer.WriteBlock())
@@ -222,7 +222,12 @@ namespace ApplyResourcesSourceGen
                                             }    
                                             writer.WriteLine("};");
                                             writer.WriteLine("using var ms = new System.IO.MemoryStream(bytes);");
-                                            writer.WriteLine($"control.{property} = new System.Drawing.Bitmap(ms);");
+                                            writer.WriteLine($"control.{property} = new {(type switch 
+                                            {
+                                                "System.Drawing.Bitmap, System.Drawing" => "System.Drawing.Bitmap",
+                                                "System.Drawing.Icon, System.Drawing" => "System.Drawing.Icon",
+                                                _ => throw new InvalidOperationException()
+                                            })}(ms);");
                                         }
                                     }
                                     else
