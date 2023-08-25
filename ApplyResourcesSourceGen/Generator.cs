@@ -230,6 +230,10 @@ namespace ApplyResourcesSourceGen
                                             })}(ms);");
                                         }
                                     }
+                                    else if (type == "System.Drawing.Font, System.Drawing" && FontTypeConverter.GetCtorParams(value) is string ctorParams)
+                                    {
+                                        writer.WriteLine($"control.{property} = new System.Drawing.Font({ctorParams});");
+                                    }
                                     else
                                     {
                                         fallbackNeeded = true;
