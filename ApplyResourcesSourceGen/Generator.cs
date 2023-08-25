@@ -172,7 +172,7 @@ namespace ApplyResourcesSourceGen
                         writer.WriteLine($"public static void ApplyResources{i}(this System.ComponentModel.ComponentResourceManager manager, object value, string objectName)");
                         using (writer.WriteBlock())
                         {
-                            writer.WriteLine($"System.Diagnostics.Debug.WriteLine(\"ApplyResources{i}({objectType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}, \\\"{objectName}\\\")\");");
+                            //writer.WriteLine($"System.Diagnostics.Debug.WriteLine(\"ApplyResources{i}({objectType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}, \\\"{objectName}\\\")\");");
                             writer.WriteLine($"var control = ({objectType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)})value;");
 
                             var fallbackNeeded = false;
@@ -189,8 +189,8 @@ namespace ApplyResourcesSourceGen
                                     {
                                         if (property == "Text")
                                         {
-                                        writer.WriteLine($"control.{property} = manager.GetString(\"{objectName}.{property}\");");
-                                    }
+                                            writer.WriteLine($"control.{property} = manager.GetString(\"{objectName}.{property}\");");
+                                        }
                                         // We should not need to deal with Items as they should be done in designer already
                                         //else if (property.StartsWith("Items"))
                                         //{
@@ -205,10 +205,14 @@ namespace ApplyResourcesSourceGen
                                     {
                                         writer.WriteLine($"control.{property} = {code};");
                                     }
+                                    else if (type == "System.Windows.Forms.TableLayoutSettings, System.Windows.Forms")
+                                    {
+                                        TableLayoutSettingsTypeConverter.WriteCode(writer, $"control.{property}", value);
+                                    }
                                     else
                                     {
                                         fallbackNeeded = true;
-                                        writer.WriteLine($"System.Diagnostics.Debug.WriteLine(\"ApplyResources{i}({objectName}.{property} = {value})\");");
+                                        writer.WriteLine($"System.Diagnostics.Debug.WriteLine(\"ApplyResources{i}({objectName}.{property} of type {type})\");");
                                     }
                                 }
                             }
