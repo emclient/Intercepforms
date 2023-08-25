@@ -181,10 +181,25 @@ namespace ApplyResourcesSourceGen
                                 foreach (var kvp in properties)
                                 {
                                     var property = kvp.Key;
+                                    if (property == "TrayLocation") continue; // this is for designer only, used for non-visual components
+                                    if (property == "TrayHeight") continue; // this is for designer only, used for non-visual components
                                     var (type, value) = kvp.Value;
+                                    if (property == "Localizable" && type == "System.Boolean, mscorlib") continue; // HACK sometimes it is not in the metadata element, probably some issue with subclassing
                                     if (string.IsNullOrEmpty(type))
                                     {
+                                        if (property == "Text")
+                                        {
                                         writer.WriteLine($"control.{property} = manager.GetString(\"{objectName}.{property}\");");
+                                    }
+                                        // We should not need to deal with Items as they should be done in designer already
+                                        //else if (property.StartsWith("Items"))
+                                        //{
+                                        //    writer.WriteLine($"control.Items.Add(manager.GetString(\"{objectName}.{property}\"));");
+                                        //}
+                                        else
+                                        {
+                                            // TODO
+                                        }
                                     }
                                     else if (TryConvertToSimpleAssignment(type, value, out var code))
                                     {
