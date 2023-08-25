@@ -209,6 +209,22 @@ namespace ApplyResourcesSourceGen
                                     {
                                         TableLayoutSettingsTypeConverter.WriteCode(writer, $"control.{property}", value);
                                     }
+                                    else if (type == "System.Drawing.Bitmap, System.Drawing")
+                                    {
+                                        var bytes = Convert.FromBase64String(value);
+                                        using (writer.WriteBlock())
+                                        {
+                                            writer.Write("var bytes = new byte[] {");
+                                            foreach (var b in bytes)
+                                            {
+                                                writer.Write(b);
+                                                writer.Write(",");
+                                            }    
+                                            writer.WriteLine("};");
+                                            writer.WriteLine("using var ms = new System.IO.MemoryStream(bytes);");
+                                            writer.WriteLine($"control.{property} = new System.Drawing.Bitmap(ms);");
+                                        }
+                                    }
                                     else
                                     {
                                         fallbackNeeded = true;
