@@ -218,34 +218,104 @@ namespace ApplyResourcesSourceGen
             if (string.IsNullOrWhiteSpace(type)) return false;
             switch(type)
             {
+                case "System.Resources.ResXNullRef, System.Windows.Forms":
+                    code = "null";
+                    return true;
+
                 case "System.Int32, mscorlib":
+                case "System.Int32, System.Private.CoreLib":
                     code = value;
                     return true;
                 case "System.Boolean, mscorlib":
+                case "System.Boolean, System.Private.CoreLib":
                     code = value.ToLower();
                     return true;
-                case "System.Drawing.Size, System.Drawing":
-                    code = $"new System.Drawing.Size({value})";
+                case "System.Char, mscorlib":
+                case "System.Char, System.Private.CoreLib":
+                    code = $"'{value}'";
                     return true;
+
                 case "System.Drawing.Point, System.Drawing":
+                case "System.Drawing.Point, System.Drawing.Primitives":
                     code = $"new System.Drawing.Point({value})";
                     return true;
+                case "System.Drawing.Size, System.Drawing":
+                case "System.Drawing.Size, System.Drawing.Primitives":
+                    code = $"new System.Drawing.Size({value})";
+                    return true;
                 case "System.Drawing.SizeF, System.Drawing":
+                case "System.Drawing.SizeF, System.Drawing.Primitives":
                     if (!value.Contains("."))
                     {
                         code = $"new System.Drawing.SizeF({value})";
                     }
                     else
                     {
+                        // I could not find any instance where it was actually a floating point value
                         throw new NotImplementedException();
                     }
                     return true;
+                // TODO System.Drawing.Font - will require convertor
+                // ignore System.Drawing.Color it should be set by designer, not resx
+
+                case "System.Windows.Forms.Padding, System.Windows.Forms":
+                case "System.Windows.Forms.Padding, System.Windows.Forms.Primitives":
+                    code = $"new System.Windows.Forms.Padding({value})";
+                    return true;
+                case "System.Windows.Forms.LinkArea, System.Windows.Forms":
+                    code = $"new System.Windows.Forms.LinkArea({value})";
+                    return true;
+
+                // simple enums
+                case "System.Windows.Forms.DockStyle, System.Windows.Forms":
+                    code = $"System.Windows.Forms.DockStyle.{value}";
+                    return true;
+                case "System.Windows.Forms.AutoSizeMode, System.Windows.Forms":
+                    code = $"System.Windows.Forms.AutoSizeMode.{value}";
+                    return true;
+                case "System.Windows.Forms.ImeMode, System.Windows.Forms":
+                    code = $"System.Windows.Forms.ImeMode.{value}";
+                    return true;
+                case "System.Windows.Forms.FormStartPosition, System.Windows.Forms":
+                    code = $"System.Windows.Forms.FormStartPosition.{value}";
+                    return true;
+                case "System.Windows.Forms.FlowDirection, System.Windows.Forms":
+                    code = $"System.Windows.Forms.FlowDirection.{value}";
+                    return true;
+                case "System.Windows.Forms.PictureBoxSizeMode, System.Windows.Forms":
+                    code = $"System.Windows.Forms.PictureBoxSizeMode.{value}";
+                    return true;
+                case "System.Windows.Forms.ScrollBars, System.Windows.Forms":
+                    code = $"System.Windows.Forms.ScrollBars.{value}";
+                    return true;
+                case "System.Windows.Forms.ImageLayout, System.Windows.Forms":
+                    code = $"System.Windows.Forms.ImageLayout.{value}";
+                    return true;
+                case "System.Windows.Forms.Orientation, System.Windows.Forms":
+                    code = $"System.Windows.Forms.Orientation.{value}";
+                    return true;
+                case "System.Windows.Forms.RightToLeft, System.Windows.Forms":
+                    code = $"System.Windows.Forms.RightToLeft.{value}";
+                    return true;
+                case "System.Drawing.ContentAlignment, System.Drawing":
+                case "System.Drawing.ContentAlignment, System.Drawing.Common":
+                    code = $"System.Drawing.ContentAlignment.{value}";
+                    return true;
+
+                // flags enums
+                case "System.Windows.Forms.AnchorStyles, System.Windows.Forms":
+                    code = $"System.Windows.Forms.AnchorStyles.{value.Replace(", ", " | System.Windows.Forms.AnchorStyles.")}";
+                    return true;
+                case "System.Windows.Forms.Keys, System.Windows.Forms":
+                    code = $"System.Windows.Forms.Keys.{value.Replace("+", " | System.Windows.Forms.Keys.")}"; // HACK probably needs to replaced with adapted code from System.Windows.Forms.KeysConverter
+                    return true;
             }
-            if (type.StartsWith("System.Boolean, mscorlib"))
-            {
-                code = value;
-                return true;
-            }
+            // probably <metadata Localizable only, not sure if we need to set it
+            //if (type.StartsWith("System.Boolean, mscorlib"))
+            //{
+            //    code = value;
+            //    return true;
+            //}
             return false;
         }
     }

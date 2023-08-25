@@ -30,18 +30,28 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form2));
             button1 = new Button();
+            button2 = new Button();
             SuspendLayout();
             // 
             // button1
             // 
+            button1.BackColor = Color.FromArgb(255, 128, 0);
             resources.ApplyResources(button1, "button1");
             button1.Name = "button1";
-            button1.UseVisualStyleBackColor = true;
+            button1.UseVisualStyleBackColor = false;
+            // 
+            // button2
+            // 
+            button2.BackColor = SystemColors.ControlLight;
+            resources.ApplyResources(button2, "button2");
+            button2.Name = "button2";
+            button2.UseVisualStyleBackColor = false;
             // 
             // Form2
             // 
             resources.ApplyResources(this, "$this");
             AutoScaleMode = AutoScaleMode.Font;
+            Controls.Add(button2);
             Controls.Add(button1);
             Name = "Form2";
             ResumeLayout(false);
@@ -50,5 +60,6 @@
         #endregion
 
         private Button button1;
+        private Button button2;
     }
 }
