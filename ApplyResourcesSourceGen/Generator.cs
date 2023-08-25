@@ -209,26 +209,14 @@ namespace ApplyResourcesSourceGen
                                     {
                                         TableLayoutSettingsTypeConverter.WriteCode(writer, $"control.{property}", value);
                                     }
-                                    else if (type is "System.Drawing.Bitmap, System.Drawing" or "System.Drawing.Icon, System.Drawing")
+                                    else if (type is "System.Drawing.Bitmap, System.Drawing" or "System.Drawing.Icon, System.Drawing" or "System.Drawing.Bitmap, System.Drawing.Common" or "System.Drawing.Icon, System.Drawing.Common")
                                     {
-                                        var bytes = Convert.FromBase64String(value);
-                                        using (writer.WriteBlock())
+                                        writer.WriteLine($"control.{property} = ({(type switch 
                                         {
-                                            writer.Write("var bytes = new byte[] {");
-                                            foreach (var b in bytes)
-                                            {
-                                                writer.Write(b);
-                                                writer.Write(",");
-                                            }    
-                                            writer.WriteLine("};");
-                                            writer.WriteLine("using var ms = new System.IO.MemoryStream(bytes);");
-                                            writer.WriteLine($"control.{property} = new {(type switch 
-                                            {
-                                                "System.Drawing.Bitmap, System.Drawing" => "System.Drawing.Bitmap",
-                                                "System.Drawing.Icon, System.Drawing" => "System.Drawing.Icon",
-                                                _ => throw new InvalidOperationException()
-                                            })}(ms);");
-                                        }
+                                            "System.Drawing.Bitmap, System.Drawing" or "System.Drawing.Bitmap, System.Drawing.Common" => "System.Drawing.Bitmap",
+                                            "System.Drawing.Icon, System.Drawing" or "System.Drawing.Icon, System.Drawing.Common" => "System.Drawing.Icon",
+                                            _ => throw new InvalidOperationException()
+                                        })})manager.GetObject(\"{objectName}.{property}\");");
                                     }
                                     else if (type == "System.Drawing.Font, System.Drawing" && FontTypeConverter.GetCtorParams(value) is string ctorParams)
                                     {
