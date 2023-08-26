@@ -59,7 +59,7 @@ namespace ApplyResourcesSourceGen
 
             // Check we are inside InitializeComponent
             var containingMethodInfo = context.Node.FirstAncestorOrSelf<MethodDeclarationSyntax>();
-            if (!containingMethodInfo?.Identifier.Text.Equals("InitializeComponent") != false)
+            if (containingMethodInfo?.Identifier.Text.Equals("InitializeComponent") is not true)
                 return (null!, null!, null!);
             var containingMethodSymbol = context.SemanticModel.GetDeclaredSymbol(containingMethodInfo, ct);
 
@@ -81,7 +81,7 @@ namespace ApplyResourcesSourceGen
                 return (null!, null!, null!);
             string objectName = literalExpressionSyntax.Token.ValueText;
 
-            ITypeSymbol objectType = context.SemanticModel.GetTypeInfo(invocationExpression.ArgumentList.Arguments[0].Expression, ct).Type;
+            var objectType = context.SemanticModel.GetTypeInfo(invocationExpression.ArgumentList.Arguments[0].Expression, ct).Type!;
             var memberAccessExpression = (MemberAccessExpressionSyntax)invocationExpression.Expression;
 
             return (memberAccessExpression.Name.GetLocation(), objectType, objectName);
@@ -244,7 +244,7 @@ namespace ApplyResourcesSourceGen
             }
         }
 
-        private bool TryConvertToSimpleAssignment(string type, string value, out string code)
+        private bool TryConvertToSimpleAssignment(string type, string value, out string? code)
         {
             code = null;
             if (string.IsNullOrWhiteSpace(type)) return false;
