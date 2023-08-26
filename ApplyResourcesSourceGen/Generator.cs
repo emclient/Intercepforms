@@ -187,7 +187,7 @@ namespace ApplyResourcesSourceGen
                                     if (property == "Localizable" && type == "System.Boolean, mscorlib") continue; // HACK sometimes it is not in the metadata element, probably some issue with subclassing
                                     if (string.IsNullOrEmpty(type))
                                     {
-                                        if (property == "Text")
+                                        if (property is "Text" or "ToolTipText" or "NoItemsText")
                                         {
                                             writer.WriteLine($"control.{property} = manager.GetString(\"{objectName}.{property}\");");
                                         }
