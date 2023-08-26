@@ -1,0 +1,32 @@
+name: Build and publish
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 8.0.x
+    - name: Build and pack
+      run: dotnet pack ApplyResourcesSourceGen /p:Configuration=Release
+    - uses: actions/upload-artifact@master
+      with:
+        name: build-artifacts
+        path: ApplyResourcesSourceGen\bin\Release\ApplyResourcesSourceGen.*.nupkg
+    - name: Publish
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      env:
+        token: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        dotnet nuget add source https://nuget.pkg.github.com/emclient/index.json -n github
+        find ApplyResourcesSourceGen/bin/Release -name '*.nupkg' | xargs -i dotnet nuget push {} -s github --api-key ${{ secrets.GITHUB_TOKEN }}
