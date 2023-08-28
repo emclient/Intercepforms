@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Xml;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
@@ -87,9 +88,18 @@ namespace ApplyResourcesSourceGen
                 return (null!, null!, null!);
 
             // Extract objectName argument (assumes a constant string)
-            if (invocationExpression.ArgumentList.Arguments[1].Expression is not LiteralExpressionSyntax literalExpressionSyntax)
+            string? objectName = null;
+            if (invocationExpression.ArgumentList.Arguments[1].Expression is LiteralExpressionSyntax literalExpressionSyntax)
+            {
+                objectName = literalExpressionSyntax.Token.ValueText;
+            }
+            else if (invocationExpression.ArgumentList.Arguments[1].Expression is BinaryExpressionSyntax { Left: LiteralExpressionSyntax leftLiteral, Right: LiteralExpressionSyntax rightLiteral } exp && exp.IsKind(SyntaxKind.AddExpression))
+            {
+                objectName = leftLiteral.Token.ValueText + rightLiteral.Token.ValueText;
+            }
+            
+            if (objectName is null)
                 return (null!, null!, null!);
-            string objectName = literalExpressionSyntax.Token.ValueText;
 
             var objectType = context.SemanticModel.GetTypeInfo(invocationExpression.ArgumentList.Arguments[0].Expression, ct).Type!;
             var memberAccessExpression = (MemberAccessExpressionSyntax)invocationExpression.Expression;
