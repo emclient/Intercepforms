@@ -33,6 +33,16 @@ namespace ApplyResourcesSourceGen
             }
             """;
 
+        private static readonly DiagnosticDescriptor WarningDescriptor = new DiagnosticDescriptor(
+#pragma warning disable RS2008 // Enable analyzer release tracking
+            "ARG0001",
+#pragma warning restore RS2008 // Enable analyzer release tracking
+            $"Issue in the {nameof(ApplyResourcesSourceGen)} generator",
+            $"Issue in the {nameof(ApplyResourcesSourceGen)} generator: " + "{0}",
+            $"{nameof(ApplyResourcesSourceGen)}",
+            DiagnosticSeverity.Warning,
+            isEnabledByDefault: true);
+
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
@@ -167,6 +177,8 @@ namespace ApplyResourcesSourceGen
                         var lineSpan = location.GetLineSpan();
 
                         //builder.AppendLine($"// name = {name}, property = {property}, type = {type}, value = {value}");
+                        var rollbackPosition = builder.Length;
+                        var rollbackNeeded = false;
                         writer.WriteLine();
                         writer.WriteLine($"[global::System.Runtime.CompilerServices.InterceptsLocation(@\"{location.SourceTree.FilePath}\", {lineSpan.StartLinePosition.Line + 1}, {lineSpan.StartLinePosition.Character + 1})]");
                         writer.WriteLine($"public static void ApplyResources{i}(this System.ComponentModel.ComponentResourceManager manager, object value, string objectName)");
@@ -175,7 +187,6 @@ namespace ApplyResourcesSourceGen
                             //writer.WriteLine($"System.Diagnostics.Debug.WriteLine(\"ApplyResources{i}({objectType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}, \\\"{objectName}\\\")\");");
                             writer.WriteLine($"var control = ({objectType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)})value;");
 
-                            var fallbackNeeded = false;
                             if (resxMap.TryGetValue(objectName, out var properties))
                             {
                                 foreach (var kvp in properties)
@@ -224,18 +235,23 @@ namespace ApplyResourcesSourceGen
                                     }
                                     else
                                     {
-                                        fallbackNeeded = true;
+                                        rollbackNeeded = true;
+                                        context.ReportDiagnostic(Diagnostic.Create(WarningDescriptor, location, $"Failed to create interceptor for {objectName} in {filenameWithoutExt} because of unhandled property {property} of type {type}."));
                                         writer.WriteLine($"System.Diagnostics.Debug.WriteLine(\"ApplyResources{i}({objectName}.{property} of type {type})\");");
                                     }
                                 }
                             }
-                            if (fallbackNeeded)
-                            {
-                                writer.WriteLine("manager.ApplyResources(value, objectName);");
-                            }
                         }
-                        builder.AppendLine($"");
-                        i++;
+                        if (rollbackNeeded)
+                        {
+                            //writer.WriteLine("manager.ApplyResources(value, objectName);");
+                            builder.Length = rollbackPosition;
+                        }
+                        else
+                        {
+                            builder.AppendLine($"");
+                            i++;
+                        }
                     }
                 }
 
