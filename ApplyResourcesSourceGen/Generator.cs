@@ -338,8 +338,8 @@ namespace ApplyResourcesSourceGen
                 case "System.Windows.Forms.AnchorStyles, System.Windows.Forms":
                     code = $"System.Windows.Forms.AnchorStyles.{value.Replace(", ", " | System.Windows.Forms.AnchorStyles.")}";
                     return true;
-                case "System.Windows.Forms.Keys, System.Windows.Forms":
-                    code = $"System.Windows.Forms.Keys.{value.Replace("+", " | System.Windows.Forms.Keys.")}"; // HACK probably needs to replaced with adapted code from System.Windows.Forms.KeysConverter
+                case "System.Windows.Forms.Keys, System.Windows.Forms" when KeysConverter.GetCode(value) is string keysCode:
+                    code = keysCode;
                     return true;
             }
             // probably <metadata Localizable only, not sure if we need to set it
