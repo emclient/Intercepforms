@@ -84,7 +84,7 @@ namespace ApplyResourcesSourceGen
                 {
                     int currentIndex = 0;
                     int nextIndex;
-                    while (currentIndex < styleString.Length)
+                    while (currentIndex < styleString!.Length)
                     {
                         // ---- SizeType Parsing -----------------
                         nextIndex = currentIndex;

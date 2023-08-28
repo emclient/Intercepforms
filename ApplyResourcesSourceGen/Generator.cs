@@ -105,7 +105,7 @@ namespace ApplyResourcesSourceGen
             }
 
             var fileNum = 0;
-            foreach (var fileGroup in locationsAndResxFiles.left.Where(t => t.Item1.SourceTree is not null).GroupBy(t => t.Item1.SourceTree.FilePath))
+            foreach (var fileGroup in locationsAndResxFiles.left.Where(t => t.Item1.SourceTree is not null).GroupBy(t => t.Item1.SourceTree!.FilePath))
             {
                 var filePath = fileGroup.Key;
                 var filePathWithoutExt = filePath.Substring(0, filePath.Length - ".Designer.cs".Length);
@@ -163,7 +163,7 @@ namespace ApplyResourcesSourceGen
                     var i = 1;
                     foreach ((var location, var objectType, var objectName) in fileGroup)
                     {
-                        Debug.Assert(location.SourceTree.FilePath == filePath);
+                        Debug.Assert(location.SourceTree!.FilePath == filePath);
                         var lineSpan = location.GetLineSpan();
 
                         //builder.AppendLine($"// name = {name}, property = {property}, type = {type}, value = {value}");
